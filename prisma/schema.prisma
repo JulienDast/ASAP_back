@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  FREE
+}
+
+enum Category {
+  TOUS
+  REUNIONS
+  TOURNOIS
+  EVENEMENTS
+  DIVERS
+}
+
+enum Status {
+  INCOMPLETE
+  COMPLETE
+  BANNED
+}
+
+model User {
+  id                Int                @id @default(autoincrement())
+  email             String             @unique
+  password          String
+  firstname         String
+  lastname          String
+  bio               String?
+  phone             String?
+  licence           String?            @unique
+  avatar            String?
+  role              Role
+  status            Status
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @default(now()) @updatedAt
+  refresh_token     String?
+  articles          Article[]
+  comments          Comment[]         
+  likes             Like[]
+  participations    Participation[]
+  createdTournaments Tournament[]      @relation("UserCreatedTournaments")
+  partners          Participation[]    @relation("PartnerRelation")
+}
+
+model Article {
+  id         Int        @id @default(autoincrement())
+  title      String
+  subtitle   String?
+  body       String     @db.Text
+  category   Category
+  picture    String
+  author     User       @relation(fields: [userId], references: [id])
+  userId     Int
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @default(now()) @updatedAt
+  comments   Comment[]
+  likes      Like[]
+}
+
+model Like {
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  article    Article    @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleId  Int
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @default(now()) @updatedAt
+
+  @@unique([userId, articleId])
+}
+
+model Comment {
+  id         Int        @id @default(autoincrement())
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  article    Article    @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleId  Int
+  text       String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @default(now()) @updatedAt
+}
+
+model Tournament {
+  id                Int                @id @default(autoincrement())
+  title             String
+  description       String
+  start_date        DateTime
+  end_date          DateTime
+  location          String
+  max_participant   Int
+  creator           User               @relation(fields: [userId], references: [id], name: "UserCreatedTournaments")
+  userId            Int
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @default(now()) @updatedAt
+  participations    Participation[]
+}
+
+model Participation {
+  id           Int        @id @default(autoincrement())
+  user         User       @relation(fields: [userId], references: [id])
+  userId       Int
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id])
+  tournamentId Int
+  partner      User        @relation("PartnerRelation", fields: [partnerId], references: [id])
+  partnerId    Int
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @default(now()) @updatedAt
+
+  @@unique([userId, tournamentId, partnerId])
+}
